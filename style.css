@@ -1,0 +1,84 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.board-container {
+    position: relative;
+    width: 600px;
+    height: 600px;
+}
+
+#goBoard {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 2px solid #333;
+    background-color: #DCB35C;
+}
+
+.territory-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.info {
+    min-width: 200px;
+    padding: 10px;
+}
+
+#analysis {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.controls button, .controls select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.controls button:hover {
+    background-color: #f0f0f0;
+}
+
+#score {
+    font-family: monospace;
+    text-align: left;
+    margin: 10px 0;
+}
+
+.controls select:hover {
+    border-color: #666;
+}
+
+.controls select:focus {
+    outline: none;
+    border-color: #333;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+#analysis p {
+    margin: 5px 0;
+    font-size: 14px;
+} 

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>围棋对弈</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="board-container">
+            <canvas id="goBoard" width="600" height="600"></canvas>
+        </div>
+        <div class="info">
+            <div id="analysis">
+                <p>黑棋胜率: <span id="win-rate">-</span>%</p>
+                <p>领先: <span id="score-lead">-</span>目</p>
+            </div>
+            <div class="controls">
+                <select id="ai-rank">
+                    <!-- 业余级别 -->
+                    <option value="10k">10级</option>
+                    <option value="9k">9级</option>
+                    <option value="8k">8级</option>
+                    <option value="7k">7级</option>
+                    <option value="6k">6级</option>
+                    <option value="5k">5级</option>
+                    <option value="4k">4级</option>
+                    <option value="3k">3级</option>
+                    <option value="2k">2级</option>
+                    <option value="1k" selected>1级</option>
+                    
+                    <!-- 业余段位 -->
+                    <option value="1d">1段</option>
+                    <option value="2d">2段</option>
+                    <option value="3d">3段</option>
+                    <option value="4d">4段</option>
+                    <option value="5d">5段</option>
+                    <option value="6d">6段</option>
+                    <option value="7d">7段</option>
+                    <option value="8d">8段</option>
+                    <option value="9d">9段</option>
+                </select>
+                <button id="analyze">形势判断</button>
+                <button id="pass">停一手</button>
+                <button id="resign">认输</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 
