@@ -70,6 +70,11 @@ class GoGame {
         
         // 绘制棋子
         this.drawStones();
+        
+        // 绘制最后一手的标记
+        if (this.lastMove) {
+            this.drawLastMoveMarker(this.lastMove.x, this.lastMove.y);
+        }
     }
 
     drawStar(x, y) {
@@ -124,6 +129,24 @@ class GoGame {
         this.ctx.stroke();
     }
 
+    drawLastMoveMarker(x, y) {
+        const centerX = this.margin + x * this.cellSize;
+        const centerY = this.margin + y * this.cellSize;
+        
+        // 绘制小三角形
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.board[y][x] === 'black' ? '#fff' : '#000';
+        
+        // 计算三角形的三个顶点
+        const size = this.cellSize * 0.2;  // 三角形大小
+        this.ctx.moveTo(centerX, centerY - size);  // 顶点
+        this.ctx.lineTo(centerX - size * 0.866, centerY + size * 0.5);  // 左下
+        this.ctx.lineTo(centerX + size * 0.866, centerY + size * 0.5);  // 右下
+        this.ctx.closePath();
+        
+        this.ctx.fill();
+    }
+
     handleClick(e) {
         if (this.currentPlayer === 'white') return; // 如果是AI回合，不响应点击
         
@@ -149,8 +172,12 @@ class GoGame {
     }
 
     makeMove(x, y) {
-        if (x >= 0 && x < this.boardSize && y >= 0 && y < this.boardSize && !this.board[y][x]) {
+        if (x >= 0 && x < this.boardSize && 
+            y >= 0 && y < this.boardSize && 
+            !this.board[y][x]) {
+            
             this.board[y][x] = this.currentPlayer;
+            this.lastMove = {x, y};  // 记录最后一手
             this.moveHistory.push({x, y});
             this.drawBoard();
             this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
@@ -177,7 +204,7 @@ class GoGame {
             const data = await response.json();
             if (data.success && data.move) {
                 console.log(`AI准备在 (${data.move.x}, ${data.move.y}) 落子`);
-                this.makeMove(data.move.x, data.move.y);
+                this.makeMove(data.move.x, data.move.y);  // 这里会自动更新 lastMove
             } else {
                 console.log('AI选择停一手');
                 this.pass();
