@@ -7,18 +7,41 @@
 </head>
 <body>
     <div class="container">
+        <!-- 左侧计时信息 -->
+        <div class="game-info">
+            <div class="player-info black">
+                <h3>黑方</h3>
+                <p>当前用时: <span id="black-current-time">0:00</span></p>
+                <p>累计用时: <span id="black-total-time">0:00</span></p>
+            </div>
+            <div class="player-info white">
+                <h3>白方 (AI)</h3>
+                <p>当前用时: <span id="white-current-time">0:00</span></p>
+                <p>累计用时: <span id="white-total-time">0:00</span></p>
+                <p>AI等级: <span id="ai-level">1级</span></p>
+            </div>
+        </div>
+        
+        <!-- 中间棋盘区域 -->
         <div class="board-container">
             <canvas id="goBoard" width="600" height="600"></canvas>
+            <div class="current-player">
+                当前: <span id="current-player">黑方</span>
+            </div>
         </div>
-        <div class="info">
+        
+        <!-- 右侧控制和分析区域 -->
+        <div class="right-panel">
+            <!-- 形势判断区域 -->
             <div id="analysis">
                 <p>黑棋胜率: <span id="win-rate">-</span>%</p>
                 <p>领先: <span id="score-lead">-</span>目</p>
             </div>
+            
+            <!-- 控制按钮区域 -->
             <div class="controls">
                 <select id="ai-rank">
-                    <!-- 业余级别 -->
-                    <option value="10k">10级</option>
+                    <option value="10k" selected>10级</option>
                     <option value="9k">9级</option>
                     <option value="8k">8级</option>
                     <option value="7k">7级</option>
@@ -27,19 +50,18 @@
                     <option value="4k">4级</option>
                     <option value="3k">3级</option>
                     <option value="2k">2级</option>
-                    <option value="1k" selected>1级</option>
-                    
-                    <!-- 业余段位 -->
-                    <option value="1d">1段</option>
-                    <option value="2d">2段</option>
-                    <option value="3d">3段</option>
-                    <option value="4d">4段</option>
-                    <option value="5d">5段</option>
-                    <option value="6d">6段</option>
-                    <option value="7d">7段</option>
-                    <option value="8d">8段</option>
-                    <option value="9d">9段</option>
+                    <option value="1k">1级</option>
+                    <option value="1d">初段</option>
+                    <option value="2d">二段</option>
+                    <option value="3d">三段</option>
+                    <option value="4d">四段</option>
+                    <option value="5d">五段</option>
+                    <option value="6d">六段</option>
+                    <option value="7d">七段</option>
+                    <option value="8d">八段</option>
+                    <option value="9d">九段</option>
                 </select>
+                <button id="undo">悔棋</button>
                 <button id="analyze">形势判断</button>
                 <button id="pass">停一手</button>
                 <button id="resign">认输</button>

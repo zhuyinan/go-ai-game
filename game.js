@@ -5,8 +5,8 @@ class GoGame {
         
         // 设置棋盘大小和边距
         this.boardSize = 19;
-        this.cellSize = Math.floor((this.canvas.width - 40) / this.boardSize);
-        this.margin = Math.floor((this.canvas.width - (this.boardSize - 1) * this.cellSize) / 2);
+        this.cellSize = this.canvas.width / (this.boardSize + 1);
+        this.margin = this.cellSize;
         
         // 初始化棋盘状态
         this.currentPlayer = 'black';
@@ -30,6 +30,26 @@ class GoGame {
         this.territoryCanvas.height = this.canvas.height;
         this.territoryCanvas.className = 'territory-overlay';
         this.canvas.parentElement.appendChild(this.territoryCanvas);
+        
+        // 计时相关
+        this.blackTotalTime = 0;
+        this.whiteTotalTime = 0;
+        this.currentMoveStartTime = Date.now();
+        this.isTimerRunning = true;
+        
+        // 启动计时器
+        this.timer = setInterval(() => this.updateTime(), 1000);
+        
+        // 绑定悔棋按钮
+        document.getElementById('undo').addEventListener('click', () => this.undo());
+        
+        // 绑定 AI 等级选择
+        this.aiRankSelect.addEventListener('change', (e) => {
+            this.updateAILevel(e.target.value);
+        });
+        
+        // 初始化 AI 等级为 10 级
+        this.updateAILevel('10k');
         
         // 初始绘制棋盘
         this.drawBoard();
@@ -172,46 +192,202 @@ class GoGame {
     }
 
     makeMove(x, y) {
-        if (x >= 0 && x < this.boardSize && 
-            y >= 0 && y < this.boardSize && 
-            !this.board[y][x]) {
-            
-            this.board[y][x] = this.currentPlayer;
-            this.lastMove = {x, y};  // 记录最后一手
-            this.moveHistory.push({x, y});
-            this.drawBoard();
-            this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
-            return true;
+        console.log(`尝试在 (${x}, ${y}) 落子`);
+        
+        if (!this.isValidMove(x, y)) {
+            console.log('无效的移动');
+            return false;
         }
+
+        try {
+            // 更新累计时间
+            const elapsed = (Date.now() - this.currentMoveStartTime) / 1000;
+            if (this.currentPlayer === 'black') {
+                this.blackTotalTime += elapsed;
+            } else {
+                this.whiteTotalTime += elapsed;
+            }
+            
+            // 落子
+            this.board[y][x] = this.currentPlayer;
+            console.log(`${this.currentPlayer} 落子在 (${x}, ${y})`);
+            
+            // 检查提子
+            const capturedStones = this.checkCaptures(x, y);
+            console.log(`提子数量: ${capturedStones.length}`);
+            
+            // 移除被提的棋子
+            capturedStones.forEach(pos => {
+                this.board[pos.y][pos.x] = null;
+            });
+            
+            // 记录这一手
+            this.lastMove = {x, y};
+            this.moveHistory.push({
+                x, y, 
+                player: this.currentPlayer,
+                blackTime: this.blackTotalTime,
+                whiteTime: this.whiteTotalTime
+            });
+            
+            // 切换玩家
+            this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+            this.currentMoveStartTime = Date.now(); // 重置当前步的开始时间
+            
+            // 更新显示
+            this.drawBoard();
+            this.updateTime(); // 立即更新时间显示
+            document.getElementById('current-player').textContent = 
+                this.currentPlayer === 'black' ? '黑方' : '白方';
+            
+            return true;
+        } catch (error) {
+            console.error('落子出错:', error);
+            this.board[y][x] = null;
+            return false;
+        }
+    }
+
+    checkCaptures(x, y) {
+        console.log(`检查提子: (${x}, ${y})`);
+        const capturedStones = [];
+        const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const oppositeColor = this.currentPlayer === 'black' ? 'white' : 'black';
+        
+        for (const [dx, dy] of directions) {
+            const newX = x + dx;
+            const newY = y + dy;
+            
+            if (this.isValidPosition(newX, newY) && 
+                this.board[newY][newX] === oppositeColor) {
+                const group = this.getGroup(newX, newY);
+                if (group && group.length > 0 && !this.hasLiberty(group)) {
+                    group.forEach(stone => {
+                        capturedStones.push(stone);
+                    });
+                }
+            }
+        }
+        
+        return capturedStones;
+    }
+
+    getGroup(x, y) {
+        console.log(`获取棋组: (${x}, ${y})`);
+        
+        // 边界检查
+        if (!this.isValidPosition(x, y)) {
+            console.log('位置无效');
+            return [];
+        }
+
+        const color = this.board[y][x];
+        if (!color) {
+            console.log('空位置');
+            return [];
+        }
+
+        const group = [];
+        const visited = new Set();
+        
+        // 使用深度优先搜索获取相连的棋子
+        const dfs = (cx, cy) => {
+            const key = `${cx},${cy}`;
+            if (visited.has(key)) return;
+            
+            visited.add(key);
+            group.push({x: cx, y: cy});
+            
+            // 检查四个方向
+            const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            for (const [dx, dy] of directions) {
+                const newX = cx + dx;
+                const newY = cy + dy;
+                
+                if (this.isValidPosition(newX, newY) && 
+                    this.board[newY][newX] === color) {
+                    dfs(newX, newY);
+                }
+            }
+        };
+        
+        // 从起始点开始搜索
+        dfs(x, y);
+        return group;
+    }
+
+    hasLiberty(group) {
+        if (!Array.isArray(group) || group.length === 0) {
+            return false;
+        }
+
+        const visited = new Set();
+        
+        for (const stone of group) {
+            const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            for (const [dx, dy] of directions) {
+                const x = stone.x + dx;
+                const y = stone.y + dy;
+                
+                if (this.isValidPosition(x, y)) {
+                    const key = `${x},${y}`;
+                    if (!visited.has(key)) {
+                        visited.add(key);
+                        if (!this.board[y][x]) {
+                            return true; // 找到一个气
+                        }
+                    }
+                }
+            }
+        }
+        
         return false;
     }
 
+    isValidPosition(x, y) {
+        return x >= 0 && x < this.boardSize && 
+               y >= 0 && y < this.boardSize;
+    }
+
+    isValidMove(x, y) {
+        return this.isValidPosition(x, y) && !this.board[y][x];
+    }
+
     async aiMove() {
-        console.log('AI回合开始');
-        const rank = this.aiRankSelect.value;
         try {
+            console.log('AI回合开始');
+            const rank = this.aiRankSelect.value;
+            const boardState = this.getBoardState();
+            
+            console.log('发送棋盘状态:', boardState);
+            
             const response = await fetch('http://localhost:8001/api/move', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    board: this.getBoardState(),
+                    board: boardState,
                     rank: rank
                 })
             });
 
             const data = await response.json();
-            if (data.success && data.move) {
+            console.log('收到AI响应:', data);
+
+            if (data.success && data.move && 
+                this.isValidMove(data.move.x, data.move.y)) {
                 console.log(`AI准备在 (${data.move.x}, ${data.move.y}) 落子`);
-                this.makeMove(data.move.x, data.move.y);  // 这里会自动更新 lastMove
+                return this.makeMove(data.move.x, data.move.y);
             } else {
                 console.log('AI选择停一手');
                 this.pass();
+                return true;
             }
         } catch (error) {
             console.error('AI落子出错:', error);
             this.pass();
+            return false;
         }
     }
 
@@ -253,91 +429,14 @@ class GoGame {
         this.updateScore();
     }
 
-    hasLiberties(x, y, visited = new Set()) {
-        const key = `${x},${y}`;
-        if (visited.has(key)) return false;
-        visited.add(key);
-
-        const color = this.board[y][x];
-        const directions = [[1,0], [-1,0], [0,1], [0,-1]];
-
-        for (const [dx, dy] of directions) {
-            const newX = x + dx;
-            const newY = y + dy;
-
-            if (newX >= 0 && newX < this.boardSize && newY >= 0 && newY < this.boardSize) {
-                if (!this.board[newY][newX]) return true; // 空位就是气
-                if (this.board[newY][newX] === color && this.hasLiberties(newX, newY, visited)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    getCapturedStones(x, y, color) {
-        const captured = [];
-        const oppositeColor = color === 'black' ? 'white' : 'black';
-        const directions = [[1,0], [-1,0], [0,1], [0,-1]];
-
-        for (const [dx, dy] of directions) {
-            const newX = x + dx;
-            const newY = y + dy;
-
-            if (newX >= 0 && newX < this.boardSize && newY >= 0 && newY < this.boardSize) {
-                if (this.board[newY][newX] === oppositeColor && !this.hasLiberties(newX, newY)) {
-                    // 如果对方棋子没有气，记录被提子的棋子
-                    this.getGroup(newX, newY, captured);
-                }
-            }
-        }
-
-        return captured;
-    }
-
-    getGroup(x, y, captured) {
-        const queue = [[x, y]];
-        const visited = new Set();
-
-        while (queue.length > 0) {
-            const [cx, cy] = queue.shift();
-            const key = `${cx},${cy}`;
-            if (visited.has(key)) continue;
-            visited.add(key);
-
-            captured.push(key); // 记录被提子的棋子
-
-            const directions = [[1,0], [-1,0], [0,1], [0,-1]];
-            for (const [dx, dy] of directions) {
-                const newX = cx + dx;
-                const newY = cy + dy;
-
-                if (newX >= 0 && newX < this.boardSize && newY >= 0 && newY < this.boardSize) {
-                    if (this.board[newY][newX] === 'white') {
-                        queue.push([newX, newY]); // 继续查找同色棋子
-                    }
-                }
-            }
-        }
-    }
-
     getBoardState() {
-        const boardState = [];
-        for (let y = 0; y < this.boardSize; y++) {
-            const row = [];
-            for (let x = 0; x < this.boardSize; x++) {
-                if (this.board[y][x] === 'black') {
-                    row.push('B');
-                } else if (this.board[y][x] === 'white') {
-                    row.push('W');
-                } else {
-                    row.push('.');
-                }
-            }
-            boardState.push(row);
-        }
-        return boardState;
+        return this.board.map(row => 
+            row.map(cell => {
+                if (cell === 'black') return 'B';
+                if (cell === 'white') return 'W';
+                return '.';
+            })
+        );
     }
 
     async analyzePosition() {
@@ -389,6 +488,71 @@ class GoGame {
                 }
             }
         }
+    }
+
+    updateTime() {
+        if (!this.isTimerRunning) return;
+        
+        const now = Date.now();
+        const elapsed = (now - this.currentMoveStartTime) / 1000;
+        
+        // 更新当前用时显示
+        if (this.currentPlayer === 'black') {
+            document.getElementById('black-current-time').textContent = this.formatTime(elapsed);
+            document.getElementById('white-current-time').textContent = '0:00';
+        } else {
+            document.getElementById('white-current-time').textContent = this.formatTime(elapsed);
+            document.getElementById('black-current-time').textContent = '0:00';
+        }
+        
+        // 更新总时间显示
+        document.getElementById('black-total-time').textContent = 
+            this.formatTime(this.blackTotalTime + (this.currentPlayer === 'black' ? elapsed : 0));
+        document.getElementById('white-total-time').textContent = 
+            this.formatTime(this.whiteTotalTime + (this.currentPlayer === 'white' ? elapsed : 0));
+    }
+
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    undo() {
+        if (this.moveHistory.length > 0) {
+            // 获取最后一手
+            const lastMove = this.moveHistory.pop();
+            
+            // 恢复时间记录
+            this.blackTotalTime = lastMove.blackTime;
+            this.whiteTotalTime = lastMove.whiteTime;
+            
+            // 重建棋盘状态
+            this.board = Array(this.boardSize).fill().map(() => Array(this.boardSize).fill(null));
+            this.moveHistory.forEach(move => {
+                this.board[move.y][move.x] = move.player;
+            });
+            
+            // 更新最后一手标记
+            this.lastMove = this.moveHistory.length > 0 ? 
+                {x: this.moveHistory[this.moveHistory.length - 1].x, 
+                 y: this.moveHistory[this.moveHistory.length - 1].y} : null;
+            
+            // 设置当前玩家为被悔棋的那一手的玩家
+            this.currentPlayer = lastMove.player;
+            this.currentMoveStartTime = Date.now();
+            
+            // 更新显示
+            this.drawBoard();
+            this.updateTime(); // 立即更新时间显示
+            document.getElementById('current-player').textContent = 
+                this.currentPlayer === 'black' ? '黑方' : '白方';
+        }
+    }
+
+    updateAILevel(level) {
+        document.getElementById('ai-level').textContent = level;
+        // 这里可以添加调整 AI 强度的逻辑
     }
 }
 
